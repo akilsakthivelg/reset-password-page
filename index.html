@@ -59,11 +59,13 @@
   </style>
 </head>
 <body>
+  <!-- Initial deep link message -->
   <div class="container" id="message-container">
     <h2>Checking for app...</h2>
     <p>Please wait while we try to open the Compox app.</p>
   </div>
 
+  <!-- Reset form -->
   <div class="container" id="reset-container" style="display:none;">
     <h2>Reset Your Password</h2>
     <form id="reset-form">
@@ -92,8 +94,8 @@
     const passwordInput = document.getElementById("password");
     const updateBtn = document.getElementById("update-btn");
 
-    // Exact same regex as Flutter
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~`+\=\-_.?@$!%*#&])[A-Za-z\d~`+\=\-_.?@$!%*#&]{8,}$/;
+    // Same regex as Flutter
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~`+=\-_.?@$!%*#&])[A-Za-z\d~`+=\-_.?@$!%*#&]{8,}$/;
 
     passwordInput.addEventListener("input", () => {
       const pwd = passwordInput.value;
@@ -115,21 +117,29 @@
     });
 
     function tryOpenApp() {
-      const start = Date.now();
-      window.location = APP_DEEP_LINK;
+      const now = Date.now();
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = APP_DEEP_LINK;
+      document.body.appendChild(iframe);
+
       setTimeout(() => {
-        if (Date.now() - start < 1500) {
+        if (Date.now() - now < 1500) {
           document.getElementById("message-container").style.display = "none";
           document.getElementById("reset-container").style.display = "block";
         }
-      }, 1200);
+      }, 1000);
     }
 
-    function getTokensFromHash() {
-      const params = new URLSearchParams(window.location.search);
+    function getTokens() {
+      let params = new URLSearchParams(window.location.hash.substring(1));
+      if (!params.get("access_token")) {
+        params = new URLSearchParams(window.location.search);
+      }
       return {
         access_token: params.get("access_token"),
-        refresh_token: params.get("refresh_token")
+        refresh_token: params.get("refresh_token"),
+        exp: params.get("exp")
       };
     }
 
@@ -155,18 +165,23 @@
       }
     });
 
-    const { access_token, refresh_token } = getTokensFromHash();
-    if (!access_token || !refresh_token) {
+    const { access_token, refresh_token, exp } = getTokens();
+    if (!access_token) {
       document.getElementById("message-container").innerHTML = "<p class='error'>Invalid or expired link.</p>";
     } else {
-      supabaseClient.auth.setSession({ access_token, refresh_token })
-        .then(({ error }) => {
-          if (error) {
-            document.getElementById("message-container").innerHTML = "<p class='error'>Session error. Link may have expired.</p>";
-          } else {
-            tryOpenApp();
-          }
-        });
+      // Check expiry if provided
+      if (exp && Date.now() / 1000 > parseInt(exp)) {
+        document.getElementById("message-container").innerHTML = "<p class='error'>This reset link has expired.</p>";
+      } else {
+        supabaseClient.auth.setSession({ access_token, refresh_token: refresh_token || "" })
+          .then(({ error }) => {
+            if (error) {
+              document.getElementById("message-container").innerHTML = `<p class='error'>${error.message}</p>`;
+            } else {
+              tryOpenApp();
+            }
+          });
+      }
     }
   </script>
 </body>
