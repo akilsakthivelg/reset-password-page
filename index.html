@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reset Password | Compox</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f7f7f7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    p {
+      font-size: 14px;
+      color: #555;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+    .message {
+      margin-top: 12px;
+      font-size: 14px;
+      text-align: center;
+    }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Set a New Password</h1>
+    <p>Choose a strong password that you haven’t used before.</p>
+    <input type="password" id="newPassword" placeholder="New password" />
+    <button id="resetBtn">Update Password</button>
+    <div id="message" class="message"></div>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    const supabaseUrl = "https://xsoanrrdybimemacaror.supabase.co";
+    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb2FucnJkeWJpbWVtYWNhcm9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNDg0OTQsImV4cCI6MjA2MTkyNDQ5NH0.GbdguCKb_UdXbtG4cAYqOCZV-ejjdL7YdRE7NHrb0vM";
+
+    const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    const resetBtn = document.getElementById("resetBtn");
+    const messageEl = document.getElementById("message");
+
+    resetBtn.addEventListener("click", async () => {
+      const newPassword = document.getElementById("newPassword").value.trim();
+      if (!newPassword) {
+        messageEl.textContent = "Please enter a password.";
+        messageEl.className = "message error";
+        return;
+      }
+
+      resetBtn.disabled = true;
+      messageEl.textContent = "Updating password...";
+      messageEl.className = "message";
+
+      try {
+        const { data, error } = await client.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+
+        messageEl.textContent = "Password updated successfully. You can now log in.";
+        messageEl.className = "message success";
+      } catch (err) {
+        console.error(err);
+        messageEl.textContent = "Failed to update password. Link may have expired.";
+        messageEl.className = "message error";
+      } finally {
+        resetBtn.disabled = false;
+      }
+    });
+
+    // Optional: Redirect to app if installed
+    window.onload = () => {
+      const appScheme = "compox://login-callback";
+      setTimeout(() => { window.location.href = appScheme; }, 1000);
+    };
+  </script>
+</body>
+</html>
