@@ -126,7 +126,7 @@
     }
 
     function getTokensFromHash() {
-      const params = new URLSearchParams(window.location.hash.substring(1));
+      const params = new URLSearchParams(window.location.search);
       return {
         access_token: params.get("access_token"),
         refresh_token: params.get("refresh_token")
