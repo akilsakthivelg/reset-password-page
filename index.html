@@ -37,35 +37,19 @@
       background: #ccc;
       cursor: not-allowed;
     }
-    .success {
-      color: green;
-      font-weight: bold;
-    }
-    .error {
-      color: red;
-      font-weight: bold;
-    }
-    .rules {
-      text-align: left;
-      font-size: 0.9em;
-      margin-top: 5px;
-    }
-    .valid {
-      color: green;
-    }
-    .invalid {
-      color: red;
-    }
+    .success { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+    .rules { text-align: left; font-size: 0.9em; margin-top: 5px; }
+    .valid { color: green; }
+    .invalid { color: red; }
   </style>
 </head>
 <body>
-  <!-- Initial deep link message -->
   <div class="container" id="message-container">
     <h2>Checking for app...</h2>
     <p>Please wait while we try to open the Compox app.</p>
   </div>
 
-  <!-- Reset form -->
   <div class="container" id="reset-container" style="display:none;">
     <h2>Reset Your Password</h2>
     <form id="reset-form">
@@ -93,8 +77,6 @@
 
     const passwordInput = document.getElementById("password");
     const updateBtn = document.getElementById("update-btn");
-
-    // Same regex as Flutter
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~`+=\-_.?@$!%*#&])[A-Za-z\d~`+=\-_.?@$!%*#&]{8,}$/;
 
     passwordInput.addEventListener("input", () => {
@@ -143,6 +125,23 @@
       };
     }
 
+    const { access_token, refresh_token, exp } = getTokens();
+
+    if (!access_token) {
+      document.getElementById("message-container").innerHTML = "<p class='error'>Invalid or expired link.</p>";
+    } else if (exp && Date.now() / 1000 > parseInt(exp)) {
+      document.getElementById("message-container").innerHTML = "<p class='error'>This reset link has expired.</p>";
+    } else {
+      supabaseClient.auth.setSession({ access_token, refresh_token: refresh_token || "" })
+        .then(({ error }) => {
+          if (error) {
+            document.getElementById("message-container").innerHTML = `<p class='error'>${error.message}</p>`;
+          } else {
+            tryOpenApp();
+          }
+        });
+    }
+
     document.getElementById("reset-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const password = passwordInput.value;
@@ -164,25 +163,6 @@
         status.className = "success";
       }
     });
-
-    const { access_token, refresh_token, exp } = getTokens();
-    if (!access_token) {
-      document.getElementById("message-container").innerHTML = "<p class='error'>Invalid or expired link.</p>";
-    } else {
-      // Check expiry if provided
-      if (exp && Date.now() / 1000 > parseInt(exp)) {
-        document.getElementById("message-container").innerHTML = "<p class='error'>This reset link has expired.</p>";
-      } else {
-        supabaseClient.auth.setSession({ access_token, refresh_token: refresh_token || "" })
-          .then(({ error }) => {
-            if (error) {
-              document.getElementById("message-container").innerHTML = `<p class='error'>${error.message}</p>`;
-            } else {
-              tryOpenApp();
-            }
-          });
-      }
-    }
   </script>
 </body>
 </html>
